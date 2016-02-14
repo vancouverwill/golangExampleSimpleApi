@@ -1,4 +1,4 @@
-# apiWebserver
+# golangExampleSimpleApi
 
 ## Setup
 
@@ -31,3 +31,4 @@ curl -H "Content-Type: application/json" -d '{"name":"jimmy the greek", "age":25
 ```
 
 curl -H "Content-Type: application/json" -d '{"accountId":9,"details":"buying lots of products AGAIN","amount":201,"date":"2015-01-19T00:00:00Z","updated":0,"created":0}' http://localhost:8080/transactions
+

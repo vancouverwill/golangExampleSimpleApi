@@ -1,3 +1,7 @@
+create database test;
+
+use test;
+
 --
 -- Table structure for table `users`
 --

@@ -1,5 +1,7 @@
 # golangExampleSimpleApi
 
+This is a very simple example of using an API with Go and shows how easy it is to setup right out of the box.
+
 ## Setup
 
 Install mysql if necessary, on OSX I used brew

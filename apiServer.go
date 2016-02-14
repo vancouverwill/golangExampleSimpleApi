@@ -38,7 +38,6 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	//set mime type to JSON
 	response.Header().Set("Content-type", "application/json")
 
-	//	err := request.ParseMultipartForm(20000)
 	err := request.ParseForm()
 	if err != nil {
 		http.Error(response, fmt.Sprintf("error parsing url %v", err), 500)
@@ -51,14 +50,8 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	case "GET":
 
 		log.Print("GET")
-		log.Print((request.Body))
-		//		log.Print(response)
-		//		st, err := db.Prepare("select * from users limit 10")
-		//		if err != nil {
-		//			fmt.Print(err)
-		//		}
-		//		rows, err := st.Query()
-		rows, err := db.Query("select id, name from users")
+		//		log.Print((request.Body))
+		rows, err := db.Query("select id, name from users limit 10")
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -67,11 +60,11 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 			var name string
 			var id int
 			err = rows.Scan(&id, &name)
-			log.Print(rows.Columns())
+			//			log.Print(rows.Columns())
 			log.Print(id)
 			log.Print(name)
-			panda := &UserRestObject{Id: id, Name: name}
-			b, err := json.Marshal(panda)
+			user := &UserRestObject{Id: id, Name: name}
+			b, err := json.Marshal(user)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -82,9 +75,6 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		result = result[:i]
 
 	case "POST":
-		//		log.Println(request.Body)
-		//		log.Print((request.Form))
-		//		log.Print((request.PostForm))
 		log.Println("POST")
 		var userRestObject UserRestObject
 		userRestObject = jsonToUserObject(response, request)

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -12,39 +13,17 @@ import (
 	"strings"
 )
 
-type Hello struct{}
-
-type RestObject struct {
-	Id   int
-	Name string
-	Age  int
+type UserRestObject struct {
+	Id   int    `json:"id"`
+	Name string `json:"name"`
+	Age  int    `json:"age"`
 }
 
-func (h Hello) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+func ServeHTTP(response http.ResponseWriter, request *http.Request) {
 	response.Header().Set("Content-type", "text/html")
 	//	response.Header().Set("Content-type", "application/json")
-	fmt.Fprint(response, "<h1>GORILLA</h1>Hello! what is your name")
+	fmt.Fprint(response, "<h1>DEFAULT</h1>Hello! what is your name")
 	fmt.Fprint(response, "what is your name!")
-}
-
-func Handler(response http.ResponseWriter, request *http.Request) {
-	log.Print("handler")
-	response.Header().Set("Content-type", "text/html")
-	webpage, err := ioutil.ReadFile("index.html")
-	if err != nil {
-		http.Error(response, fmt.Sprintf("home.html file error %v", err), 500)
-	}
-	fmt.Fprint(response, string(webpage))
-}
-
-func AccountAPIHandler(response http.ResponseWriter, request *http.Request) {
-	log.Print("AccountAPIHandler")
-	response.Header().Set("Content-type", "text/html")
-	webpage, err := ioutil.ReadFile("account.html")
-	if err != nil {
-		http.Error(response, fmt.Sprintf("home.html file error %v", err), 500)
-	}
-	fmt.Fprint(response, string(webpage))
 }
 
 // Respond to URLs of the form /generic/...
@@ -91,7 +70,7 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 			log.Print(rows.Columns())
 			log.Print(id)
 			log.Print(name)
-			panda := &RestObject{Id: id, Name: name}
+			panda := &UserRestObject{Id: id, Name: name}
 			b, err := json.Marshal(panda)
 			if err != nil {
 				fmt.Println(err)
@@ -103,23 +82,18 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		result = result[:i]
 
 	case "POST":
-		log.Println(request.Body)
+		//		log.Println(request.Body)
+		//		log.Print((request.Form))
+		//		log.Print((request.PostForm))
 		log.Println("POST")
-		name := request.FormValue("name")
-		age := request.FormValue("age")
-		postName := request.PostFormValue("name")
-
-		ageNumber := 44
-		log.Println("name:" + name + " postName: " + postName)
-		log.Println(age)
-		log.Println(request)
+		var userRestObject UserRestObject
+		userRestObject = jsonToUserObject(response, request)
+		log.Println("name:" + userRestObject.Name + " age: " + strconv.Itoa(userRestObject.Age))
 		st, err := db.Prepare("INSERT INTO users(name, age) VALUES(?, ?)")
-		//		st, err := db.Prepare("INSERT INTO users(name) VALUES(?)")
 		if err != nil {
 			fmt.Print(err)
 		}
-		res, err := st.Exec(name, ageNumber)
-		//		res, err := st.Exec(name)
+		res, err := st.Exec(userRestObject.Name, userRestObject.Age)
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -183,6 +157,25 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	db.Close()
 }
 
+func jsonToUserObject(response http.ResponseWriter, request *http.Request) UserRestObject {
+	var userRestObject UserRestObject
+	body, err := ioutil.ReadAll(io.LimitReader(request.Body, 1048576))
+	if err != nil {
+		panic(err)
+	}
+	if err := request.Body.Close(); err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(body, &userRestObject); err != nil {
+		response.Header().Set("Content-Type", "application/json; charset=UTF-8")
+		response.WriteHeader(422) // unprocessable entity
+		if err := json.NewEncoder(response).Encode(err); err != nil {
+			panic(err)
+		}
+	}
+	return userRestObject
+}
+
 func main() {
 	port := 4000
 
@@ -190,10 +183,9 @@ func main() {
 	portstring := strconv.Itoa(port)
 
 	mux := http.NewServeMux()
-	mux.Handle("/v1/accountholder/", http.HandlerFunc(AccountAPIHandler))
 
 	mux.Handle("/v1/", http.HandlerFunc(APIHandler))
-	mux.Handle("/", http.HandlerFunc(Handler))
+	//	mux.Handle("/", http.HandlerFunc(Handler))
 
 	log.Print("Listening on port " + portstring + " ... ")
 	errs := http.ListenAndServe(":"+portstring, mux)

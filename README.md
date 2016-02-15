@@ -1,6 +1,6 @@
 # golangExampleSimpleApi
 
-This is a very simple example of using an API with Go and shows how easy it is to setup right out of the box.
+This is a very simple example of using an API with Go and shows how easy it is to setup right out of the box. Currently contains no validation or security.
 
 ## Setup
 

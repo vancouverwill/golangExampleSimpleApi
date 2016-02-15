@@ -19,14 +19,7 @@ type UserRestObject struct {
 	Age  int    `json:"age"`
 }
 
-func ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	response.Header().Set("Content-type", "text/html")
-	//	response.Header().Set("Content-type", "application/json")
-	fmt.Fprint(response, "<h1>DEFAULT</h1>Hello! what is your name")
-	fmt.Fprint(response, "what is your name!")
-}
-
-// Respond to URLs of the form /generic/...
+// Respond to URLs of the form /v1/...
 func APIHandler(response http.ResponseWriter, request *http.Request) {
 	log.Print("APIhandler")
 	//Connect to database
@@ -49,21 +42,18 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	switch request.Method {
 	case "GET":
 
-		log.Print("GET")
-		//		log.Print((request.Body))
-		rows, err := db.Query("select id, name from users limit 10")
+		log.Println("GET")
+		rows, err := db.Query("select id, name, age from users limit 100")
 		if err != nil {
 			fmt.Print(err)
 		}
 		i := 0
 		for rows.Next() {
 			var name string
+			var age int
 			var id int
-			err = rows.Scan(&id, &name)
-			//			log.Print(rows.Columns())
-			log.Print(id)
-			log.Print(name)
-			user := &UserRestObject{Id: id, Name: name}
+			err = rows.Scan(&id, &name, &age)
+			user := &UserRestObject{Id: id, Name: name, Age: age}
 			b, err := json.Marshal(user)
 			if err != nil {
 				fmt.Println(err)
@@ -94,20 +84,20 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		result = result[:1]
 
 	case "PUT":
-		log.Print("PUT")
-		log.Print((request.Body))
-		log.Print((request.Form))
-		log.Print((request.PostForm))
+		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
+		log.Print("DELETE  id:" + id + "")
+		var userRestObject UserRestObject
+		userRestObject = jsonToUserObject(response, request)
 
-		name := request.PostFormValue("name")
-		id := request.PostFormValue("id")
-		log.Print("PUT name:" + name + "-id:" + id + "|")
+		name := userRestObject.Name
+		age := userRestObject.Age
+		log.Println("PUT name:" + name + "-id:" + id + " age:" + strconv.Itoa(age) + "")
 
-		st, err := db.Prepare("UPDATE users SET name=? WHERE id=?")
+		st, err := db.Prepare("UPDATE users SET name=?, age=? WHERE id=?")
 		if err != nil {
 			fmt.Print(err)
 		}
-		res, err := st.Exec(name, id)
+		res, err := st.Exec(name, age, id)
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -116,8 +106,10 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 			result[0] = "true"
 		}
 		result = result[:1]
+
 	case "DELETE":
-		id := strings.Replace(request.URL.Path, "/api/", "", -1)
+		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
+		log.Print("DELETE  id:" + id + "")
 		st, err := db.Prepare("DELETE FROM users WHERE id=?")
 		if err != nil {
 			fmt.Print(err)

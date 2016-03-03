@@ -1,0 +1,7 @@
+language: go
+notificaitons:
+  email:
+    recipients: willmelbourne@gmail.com
+    on_success: change
+    on_failure: always
+before_script:

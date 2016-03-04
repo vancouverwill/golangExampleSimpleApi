@@ -1,4 +1,5 @@
 language: go
+sudo: false
 notificaitons:
   email:
     recipients: willmelbourne@gmail.com

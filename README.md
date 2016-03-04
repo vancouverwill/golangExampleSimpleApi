@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/vancouverwill/golangExampleSimpleApi.svg?branch=master)](https://travis-ci.org/vancouverwill/golangExampleSimpleApi)
+
 # golangExampleSimpleApi
 
 This is a very simple example of using an API with Go and shows how easy it is to setup right out of the box. Currently contains no validation or security.

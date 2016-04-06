@@ -24,6 +24,9 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	log.Print("APIhandler")
 	//Connect to database
 	db, e := sql.Open("mysql", "root:@tcp(localhost:3306)/test")
+
+	defer db.Close()
+
 	if e != nil {
 		fmt.Print(e)
 	}
@@ -37,32 +40,62 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	}
 
 	//can't define dynamic slice in golang
-	var result = make([]string, 1000)
+	var json = make([]string, 1000)
 
 	switch request.Method {
 	case "GET":
+		userId := request.FormValue("userId")
+		if userId == "" {
+			log.Println("userId", userId)
+			log.Println("GET ALL")
+			rows, err := db.Query("select id, name, age from users limit 100")
+			if err != nil {
+				fmt.Print(err)
+			}
+			i := 0
+			defer rows.Close()
+			for rows.Next() {
+				var name string
+				var age int
+				var id int
+				err = rows.Scan(&id, &name, &age)
+				user := &UserRestObject{Id: id, Name: name, Age: age}
+				b, err := json.Marshal(user)
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+				result[i] = fmt.Sprintf("%s", string(b))
+				i++
+			}
+			json = result[:i]
+		} else {
+			log.Println("userId", userId)
+			log.Println("GET search")
+			st, err := db.Prepare("select id, name, age from users WHERE id = ? ")
+			defer st.Close()
+			if err != nil {
+				log.Fatal("error preparing statement:", err)
+			}
 
-		log.Println("GET")
-		rows, err := db.Query("select id, name, age from users limit 100")
-		if err != nil {
-			fmt.Print(err)
-		}
-		i := 0
-		for rows.Next() {
 			var name string
 			var age int
 			var id int
-			err = rows.Scan(&id, &name, &age)
+
+			err = st.QueryRow(userId).Scan(&id, &name, &age)
+
+			if err != nil {
+				log.Fatal(err)
+			}
 			user := &UserRestObject{Id: id, Name: name, Age: age}
-			b, err := json.Marshal(user)
+			u, err := json.Marshal(user)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			result[i] = fmt.Sprintf("%s", string(b))
-			i++
+
+			json[0] = fmt.Sprintf("%s", string(u))
 		}
-		result = result[:i]
 
 	case "POST":
 		log.Println("POST")
@@ -79,9 +112,9 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		}
 
 		if res != nil {
-			result[0] = "true"
+			json[0] = "true"
 		}
-		result = result[:1]
+		result = json[:1]
 
 	case "PUT":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -127,6 +160,8 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	default:
 	}
 
+	// log.Print(result)
+
 	json, err := json.Marshal(result)
 	if err != nil {
 		fmt.Println(err)
@@ -136,7 +171,7 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	// Send the text diagnostics to the client.
 	fmt.Fprintf(response, "%v", string(json))
 	//fmt.Fprintf(response, " request.URL.Path   '%v'\n", request.Method)
-	db.Close()
+	// db.Close()
 }
 
 func jsonToUserObject(response http.ResponseWriter, request *http.Request) UserRestObject {

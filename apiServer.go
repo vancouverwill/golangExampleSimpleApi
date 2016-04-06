@@ -40,7 +40,7 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	}
 
 	//can't define dynamic slice in golang
-	var json = make([]string, 1000)
+	var jsonResult = make([]string, 1000)
 
 	switch request.Method {
 	case "GET":
@@ -65,10 +65,10 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 					fmt.Println(err)
 					return
 				}
-				result[i] = fmt.Sprintf("%s", string(b))
+				jsonResult[i] = fmt.Sprintf("%s", string(b))
 				i++
 			}
-			json = result[:i]
+			jsonResult = jsonResult[:i]
 		} else {
 			log.Println("userId", userId)
 			log.Println("GET search")
@@ -94,7 +94,8 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 				return
 			}
 
-			json[0] = fmt.Sprintf("%s", string(u))
+			jsonResult[0] = fmt.Sprintf("%s", string(u))
+            jsonResult = jsonResult[:1]
 		}
 
 	case "POST":
@@ -112,9 +113,9 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		}
 
 		if res != nil {
-			json[0] = "true"
+			jsonResult[0] = "true"
 		}
-		result = json[:1]
+		jsonResult = jsonResult[:1]
 
 	case "PUT":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -136,9 +137,9 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		}
 
 		if res != nil {
-			result[0] = "true"
+			jsonResult[0] = "true"
 		}
-		result = result[:1]
+		jsonResult = jsonResult[:1]
 
 	case "DELETE":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -153,16 +154,16 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		}
 
 		if res != nil {
-			result[0] = "true"
+			jsonResult[0] = "true"
 		}
-		result = result[:1]
+		jsonResult = jsonResult[:1]
 
 	default:
 	}
 
 	// log.Print(result)
 
-	json, err := json.Marshal(result)
+	json, err := json.Marshal(jsonResult)
 	if err != nil {
 		fmt.Println(err)
 		return

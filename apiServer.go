@@ -39,36 +39,42 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		http.Error(response, fmt.Sprintf("error parsing url %v", err), 500)
 	}
 
-	//can't define dynamic slice in golang
-	var jsonResult = make([]string, 1000)
-
-	switch request.Method {
+	// var jsonResult []string
+	
+    switch request.Method {
 	case "GET":
 		userId := request.FormValue("userId")
+        
 		if userId == "" {
+	        var users []UserRestObject
 			log.Println("userId", userId)
 			log.Println("GET ALL")
 			rows, err := db.Query("select id, name, age from users limit 100")
 			if err != nil {
 				fmt.Print(err)
 			}
-			i := 0
+
 			defer rows.Close()
 			for rows.Next() {
 				var name string
 				var age int
 				var id int
 				err = rows.Scan(&id, &name, &age)
-				user := &UserRestObject{Id: id, Name: name, Age: age}
-				b, err := json.Marshal(user)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-				jsonResult[i] = fmt.Sprintf("%s", string(b))
-				i++
+                if err != nil {
+                    fmt.Println(err)
+                    return
+                }
+				user := UserRestObject{Id: id, Name: name, Age: age}
+			    users = append(users, user)
 			}
-			jsonResult = jsonResult[:i]
+            jsonResult, err := json.Marshal(users)
+            if err != nil {
+                fmt.Println(err)
+                return
+            }
+            response.WriteHeader(http.StatusOK)
+            fmt.Fprintf(response, "%v", string(jsonResult))
+            return
 		} else {
 			log.Println("userId", userId)
 			log.Println("GET search")
@@ -88,14 +94,13 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 				log.Fatal(err)
 			}
 			user := &UserRestObject{Id: id, Name: name, Age: age}
-			u, err := json.Marshal(user)
+			jsonResult, err := json.Marshal(user)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-
-			jsonResult[0] = fmt.Sprintf("%s", string(u))
-            jsonResult = jsonResult[:1]
+            fmt.Fprintf(response, "%v", string(jsonResult))            
+            return
 		}
 
 	case "POST":
@@ -107,15 +112,19 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			fmt.Print(err)
 		}
-		res, err := st.Exec(userRestObject.Name, userRestObject.Age)
+		result, err := st.Exec(userRestObject.Name, userRestObject.Age)
 		if err != nil {
 			fmt.Print(err)
 		}
+        
+        jsonResult, err := json.Marshal(result)
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
 
-		if res != nil {
-			jsonResult[0] = "true"
-		}
-		jsonResult = jsonResult[:1]
+        fmt.Fprintf(response, "%v", string(jsonResult))
+        return
 
 	case "PUT":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -131,15 +140,19 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			fmt.Print(err)
 		}
-		res, err := st.Exec(name, age, id)
+		result, err := st.Exec(name, age, id)
 		if err != nil {
 			fmt.Print(err)
 		}
-
-		if res != nil {
-			jsonResult[0] = "true"
-		}
-		jsonResult = jsonResult[:1]
+        
+        jsonResult, err := json.Marshal(result)
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
+        
+        fmt.Fprintf(response, "%v", string(jsonResult))
+        return
 
 	case "DELETE":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -148,31 +161,21 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			fmt.Print(err)
 		}
-		res, err := st.Exec(id)
+		result, err := st.Exec(id)
 		if err != nil {
 			fmt.Print(err)
 		}
 
-		if res != nil {
-			jsonResult[0] = "true"
-		}
-		jsonResult = jsonResult[:1]
-
-	default:
+		jsonResult, err := json.Marshal(result)
+        if err != nil {
+            fmt.Println(err)
+            return
+        }
+        
+        fmt.Fprintf(response, "%v", string(jsonResult))
+        return
+	    default:
 	}
-
-	// log.Print(result)
-
-	json, err := json.Marshal(jsonResult)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	// Send the text diagnostics to the client.
-	fmt.Fprintf(response, "%v", string(json))
-	//fmt.Fprintf(response, " request.URL.Path   '%v'\n", request.Method)
-	// db.Close()
 }
 
 func jsonToUserObject(response http.ResponseWriter, request *http.Request) UserRestObject {

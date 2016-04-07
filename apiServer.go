@@ -111,19 +111,35 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		st, err := db.Prepare("INSERT INTO users(name, age) VALUES(?, ?)")
 		if err != nil {
 			fmt.Print(err)
+            return
 		}
 		result, err := st.Exec(userRestObject.Name, userRestObject.Age)
 		if err != nil {
 			fmt.Print(err)
+            return
 		}
         
-        jsonResult, err := json.Marshal(result)
+        lastInsertedId, err := result.LastInsertId()
         if err != nil {
-            fmt.Println(err)
+			fmt.Print(err)
             return
-        }
+		}
+        
+        // result.LastInsertId
+        
+        // fmt.Println(result)
+        
+        // jsonResult, err := json.Marshal(result)
+        // if err != nil {
+        //     fmt.Println(err)
+        //     return
+        // }
+        // fmt.Println(jsonResult)
+        
+        // result.LastInsertId.(int)
 
-        fmt.Fprintf(response, "%v", string(jsonResult))
+        // fmt.Fprintf(response, "%v", "{\"id\":" + strconv.ParseInt(result.LastInsertId, 10, 64) + "}")
+        fmt.Fprintf(response, "%v", "{\"id\":" + strconv.FormatInt(lastInsertedId, 10) + "}")
         return
 
 	case "PUT":

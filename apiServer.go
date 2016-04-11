@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
 	"strings"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type UserRestObject struct {
@@ -40,13 +41,13 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 	}
 
 	// var jsonResult []string
-	
-    switch request.Method {
+
+	switch request.Method {
 	case "GET":
 		userId := request.FormValue("userId")
-        
+
 		if userId == "" {
-	        var users []UserRestObject
+			var users []UserRestObject
 			log.Println("userId", userId)
 			log.Println("GET ALL")
 			rows, err := db.Query("select id, name, age from users limit 100")
@@ -60,21 +61,21 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 				var age int
 				var id int
 				err = rows.Scan(&id, &name, &age)
-                if err != nil {
-                    fmt.Println(err)
-                    return
-                }
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
 				user := UserRestObject{Id: id, Name: name, Age: age}
-			    users = append(users, user)
+				users = append(users, user)
 			}
-            jsonResult, err := json.Marshal(users)
-            if err != nil {
-                fmt.Println(err)
-                return
-            }
-            response.WriteHeader(http.StatusOK)
-            fmt.Fprintf(response, "%v", string(jsonResult))
-            return
+			jsonResult, err := json.Marshal(users)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			response.WriteHeader(http.StatusOK)
+			fmt.Fprintf(response, "%v", string(jsonResult))
+			return
 		} else {
 			log.Println("userId", userId)
 			log.Println("GET search")
@@ -99,8 +100,8 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 				fmt.Println(err)
 				return
 			}
-            fmt.Fprintf(response, "%v", string(jsonResult))            
-            return
+			fmt.Fprintf(response, "%v", string(jsonResult))
+			return
 		}
 
 	case "POST":
@@ -111,36 +112,22 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		st, err := db.Prepare("INSERT INTO users(name, age) VALUES(?, ?)")
 		if err != nil {
 			fmt.Print(err)
-            return
+			return
 		}
 		result, err := st.Exec(userRestObject.Name, userRestObject.Age)
 		if err != nil {
 			fmt.Print(err)
-            return
+			return
 		}
-        
-        lastInsertedId, err := result.LastInsertId()
-        if err != nil {
-			fmt.Print(err)
-            return
-		}
-        
-        // result.LastInsertId
-        
-        // fmt.Println(result)
-        
-        // jsonResult, err := json.Marshal(result)
-        // if err != nil {
-        //     fmt.Println(err)
-        //     return
-        // }
-        // fmt.Println(jsonResult)
-        
-        // result.LastInsertId.(int)
 
-        // fmt.Fprintf(response, "%v", "{\"id\":" + strconv.ParseInt(result.LastInsertId, 10, 64) + "}")
-        fmt.Fprintf(response, "%v", "{\"id\":" + strconv.FormatInt(lastInsertedId, 10) + "}")
-        return
+		lastInsertedId, err := result.LastInsertId()
+		if err != nil {
+			fmt.Print(err)
+			return
+		}
+
+		fmt.Fprintf(response, "%v", "{\"id\":"+strconv.FormatInt(lastInsertedId, 10)+"}")
+		return
 
 	case "PUT":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -160,15 +147,15 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		if err != nil {
 			fmt.Print(err)
 		}
-        
-        jsonResult, err := json.Marshal(result)
-        if err != nil {
-            fmt.Println(err)
-            return
-        }
-        
-        fmt.Fprintf(response, "%v", string(jsonResult))
-        return
+
+		jsonResult, err := json.Marshal(result)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Fprintf(response, "%v", string(jsonResult))
+		return
 
 	case "DELETE":
 		id := strings.Replace(request.URL.Path, "/v1/", "", -1)
@@ -183,14 +170,14 @@ func APIHandler(response http.ResponseWriter, request *http.Request) {
 		}
 
 		jsonResult, err := json.Marshal(result)
-        if err != nil {
-            fmt.Println(err)
-            return
-        }
-        
-        fmt.Fprintf(response, "%v", string(jsonResult))
-        return
-	    default:
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		fmt.Fprintf(response, "%v", string(jsonResult))
+		return
+	default:
 	}
 }
 
@@ -213,6 +200,12 @@ func jsonToUserObject(response http.ResponseWriter, request *http.Request) UserR
 	return userRestObject
 }
 
+func lostHandler(response http.ResponseWriter, request *http.Request) {
+	response.Header().Set("Content-Type", "application/json; charset=utf-8")
+	response.WriteHeader(http.StatusNotFound)
+	fmt.Fprintf(response, "%v", "{\"status\":\"404\",\"message\":\"incorrect endpoint\"}")
+}
+
 func main() {
 	port := 4000
 
@@ -222,7 +215,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	mux.Handle("/v1/", http.HandlerFunc(APIHandler))
-	//	mux.Handle("/", http.HandlerFunc(Handler))
+	mux.Handle("/", http.HandlerFunc(lostHandler))
 
 	log.Print("Listening on port " + portstring + " ... ")
 	errs := http.ListenAndServe(":"+portstring, mux)
